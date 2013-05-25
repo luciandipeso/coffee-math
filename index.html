@@ -67,8 +67,7 @@
       { key: 'condensed-milk', string: 'Condensed milk', color: '#c18a98' },
       { key: 'milk', string: 'Milk', color: '#c16a82' },
 
-      { key: 'hot-water', string: 'Hot water', color: '#66b98b' },
-      { key: 'cold-water', string: 'Cold water', color: '#66b98b' },
+      { key: 'water', string: 'Water', color: '#66b98b' },
       { key: 'ice', string: 'Ice', color: '#84b99c' },
 
       { key: 'chocolate', string: 'Chocolate', color: '#602d20' },
@@ -117,7 +116,7 @@
       'americano': {
         string: 'Americano',
         ingredients: {
-          'hot-water': 8,
+          'water': 8,
           'espresso': 1.5
         }
       },
@@ -126,7 +125,7 @@
         string: 'Iced americano',
         ingredients: {
           'ice': 4,
-          'cold-water': 4,
+          'water': 4,
           'espresso': 1.5
         }
       },
@@ -386,14 +385,14 @@
 
       for(; i<length; i++) {
         var ingredient = ingredients[i];
-        var row_index = Math.floor(i/3);
+        var row_index = Math.floor(i/6);
         var row = wrapper.find('div[class*="row"]:eq(' + row_index + ')');
         if(!row.length) {
           row = $('<div class="row-fluid"></div>').appendTo(wrapper);
         }
 
         $(
-          '<div class="span4">' + 
+          '<div class="span2">' + 
             '<a href="#" class="ingredient" id="' + ingredient.key + '" style="background-color: ' + ingredient.color + '">' + 
               ingredient.string + 
             '</a>' + 
