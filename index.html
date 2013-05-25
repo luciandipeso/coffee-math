@@ -15,6 +15,15 @@
 
     <div class="container">
       <div class="row">
+        <div class="span12">
+          <h2>Ingredients</h2>
+          <div id="ingredients-wrapper">
+            
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
         <div class="span6">
           <h2>Equation</h2>
           <div id="equation-wrapper">
@@ -26,15 +35,6 @@
           <div id="results-wrapper">
           </div>
           <div id="bar-wrapper"></div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="span12">
-          <h2>Ingredients</h2>
-          <div id="ingredients-wrapper">
-            
-          </div>
         </div>
       </div>
     </div>
@@ -78,6 +78,17 @@
       { key: 'espresso', string: 'Espresso', color: '#633023' }
     ];
 
+    /**
+     * All possible coffees
+     *
+     * Each object is:
+     * {
+     *   string: (string) The human-readable string
+     *   ingredients: (object) An object representing the ratio of ingredients
+     * }
+     *
+     * @var object
+     */
     var coffees = {
       'antoccino': {
         string: 'Antoccino',
@@ -227,14 +238,14 @@
       'drip-coffee': {
         string: 'Drip coffee',
         ingredients: {
-          'drip-coffee': 8
+          'drip': 8
         }
       },
 
       'iced-coffee': {
         string: 'Iced coffee',
         ingredients: {
-          'drip-coffee': 5,
+          'drip': 5,
           'ice': 3
         }
       },
@@ -242,7 +253,7 @@
       'irish-coffee': {
         string: 'Irish coffee',
         ingredients: {
-          'drip-coffee': 6,
+          'drip': 5,
           'whiskey': 1.5,
           'cream': 1.5
         }
@@ -257,6 +268,11 @@
       }
     };
 
+    /**
+     * If the display logic is running
+     *
+     * @var bool
+     */
     var running = false;
 
     /**
@@ -268,6 +284,12 @@
       init_hypercube();
     }
 
+    /**
+     * Display results
+     *
+     * @param array coords The coordinates of the equation
+     * @param array distances The calculated distances between the equation and coffees
+     */
     function display(coords, distances) {
       if(running) {
         window.setTimeout(function() {
@@ -277,15 +299,23 @@
 
       running = true;
 
-      display_bar(coords);
+      display_ratio(coords);
       display_coffees(distances);
 
       running = false;
     }
 
-    function display_coffees(distances)
+    /**
+     * Display coffees
+     *
+     * @param array distances The calculated distances between the equation and coffees
+     * @param float exclude Distances less than this number will be excluded
+     */
+    function display_coffees(distances, exclude)
     {
       var results_wrapper = $('#results-wrapper');
+      exclude = exclude || 0.25;
+
       results_wrapper.empty();
 
       var i=0,
@@ -296,7 +326,7 @@
 
         weight = (weight < 0) ? 0 : weight;
 
-        if(weight < 0.25)
+        if(weight < exclude)
         {
           continue;
         }
@@ -311,12 +341,17 @@
         .css('opacity', weight);
       }
 
-      if(results_wrapper.is(':empty')) {
+      if(results_wrapper.is(':empty') && $('#equation-wrapper').find('.eq-component').length) {
         results_wrapper.append('<p class="empty">No matches found</p>')
       }
     }
 
-    function display_bar(coords)
+    /**
+     * Display ingredient ratio
+     *
+     * @param array coords The coords of the equation
+     */
+    function display_ratio(coords)
     {
       var bar_wrapper = $('#bar-wrapper');
 
@@ -373,17 +408,14 @@
     function init_listeners() {
       $('#ingredients-wrapper').on('click', 'a.ingredient', function(event) {
         event.preventDefault();
-        add_eq_ingredient_if_missing(this.id);
-        $(this).fadeTo(200, 0.5);
+        toggle_ingredient(this.id);
       });
 
       $('#equation-wrapper').on('click', 'button.remove', function(event) {
         var component = $(this).closest('.eq-component'),
-            ingredient_id = component.data('ingredient');
+            ingredient_key = component.data('ingredient');
 
-        $('#' + ingredient_id).fadeTo(200, 1); 
-        component.remove();
-        $(document).trigger('coffee.change');
+        remove_ingredient(ingredient_key);
       });
 
       $('#equation-wrapper').on('click', '.coefficient-menu input', function(event) {
@@ -436,17 +468,29 @@
     }
 
     /**
-     * Insert an ingredient to the equation if it doesn't already exist
+     * Add or remove an ingredient to or from the equation
      *
      * @param string ingredient_key
      */
-    function add_eq_ingredient_if_missing(ingredient_key) {
-      var wrapper = $('#equation-wrapper');
-
-      if(wrapper.find('#eq-' + ingredient_key + '-wrapper').length) {
-        //This has already been added
-        return;
+    function toggle_ingredient(ingredient_key) {
+      if($('#equation-wrapper').find('#eq-' + ingredient_key + '-wrapper').length) {
+        // Remove this ingredient
+        return remove_ingredient(ingredient_key);
       }
+      add_ingredient(ingredient_key);
+    }
+
+    /**
+     * Add an ingredient to the equation if it is not already present
+     *
+     * @param string ingredient_key
+     */
+    function add_ingredient(ingredient_key) {
+      var wrapper = $('#equation-wrapper');
+      if(wrapper.find('#eq-' + ingredient_key + '-wrapper').length) {
+        // This has already been added
+        return;
+      } 
 
       var ingredient = find_ingredient(ingredient_key);
 
@@ -457,7 +501,7 @@
             '<span class="caret"></span>' +
           '</a>' +
           '<ul class="coefficient-menu dropdown-menu">' +
-            '<input type="number" size="1" value="1">' +
+            '<input type="number" min="0" max="999" size="1" value="1">' +
           '</ul>' +
           '<button class="ingredient btn" style="background-color: ' + ingredient.color + '">' +
             ingredient.string + 
@@ -469,6 +513,26 @@
       .data('ingredient', ingredient.key)
       .data('axis', ingredient.axis)
       .trigger('coffee.change');
+
+      $('#' + ingredient_key).fadeTo(200, 0.5);
+    }
+
+    /**
+     * Removes an ingredient from the equation
+     *
+     * @param string ingredient_key
+     */
+    function remove_ingredient(ingredient_key) {
+      var wrapper = $('#equation-wrapper'),
+          component = wrapper.find('#eq-' + ingredient_key + '-wrapper');
+      if(!component.length) {
+        // This has already been removed
+        return;
+      }
+
+      $('#' + ingredient_key).fadeTo(200, 1); 
+      component.remove();
+      $(document).trigger('coffee.change');
     }
 
     /**
